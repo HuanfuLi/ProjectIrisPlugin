@@ -1,5 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" package="com.projectiris.unityplugin">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.projectiris.unityplugin">
+
+    <!-- ===== IMPORTANT NOTE =====
+         This is a LIBRARY manifest.
+         Permissions and features declared here will be MERGED into
+         the main Unity app's AndroidManifest.xml during build.
+
+         Only declare permissions/features that are SPECIFIC to this plugin.
+         Common permissions should be in the main Unity manifest.
+    -->
+
+    <!-- ===== Camera Permissions ===== -->
+    <!-- Standard Android camera permission -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Quest-specific headset camera permission (Required for Passthrough Camera API) -->
+    <uses-permission android:name="horizonos.permission.HEADSET_CAMERA" />
+
+    <!-- ===== Audio Permissions ===== -->
+    <!-- Microphone permission for voice recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- ===== Network Permissions ===== -->
+    <!-- Internet access for WebSocket connection to Gemini API -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Network state checking (for connection monitoring) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ===== Hardware Features ===== -->
+    <!-- Declare features but make them optional to avoid install restrictions -->
+
+    <!-- Camera hardware (optional - won't block installation on devices without camera) -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!-- Camera2 full API support (optional) -->
+    <uses-feature
+        android:name="android.hardware.camera2.full"
+        android:required="false" />
+
+    <!-- Microphone hardware (optional) -->
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
+    <!-- VR head tracking (optional - will be declared as required in main manifest) -->
+    <uses-feature
+        android:name="android.hardware.vr.headtracking"
+        android:version="1"
+        android:required="false" />
+
+    <!-- VR software mode (optional) -->
+    <uses-feature
+        android:name="android.software.vr.mode"
+        android:required="false" />
+
+    <!-- Passthrough feature (Quest 3 specific, optional) -->
+    <uses-feature
+        android:name="com.oculus.feature.PASSTHROUGH"
+        android:required="false" />
+
+    <!-- ===== Application Element ===== -->
+    <!-- Library projects typically don't need application element,
+         but we include it for any library-specific configurations -->
+    <application>
+        <!-- No activities - this is a library plugin -->
+        <!-- All components will be merged into the main Unity app -->
+    </application>
 
 </manifest>
