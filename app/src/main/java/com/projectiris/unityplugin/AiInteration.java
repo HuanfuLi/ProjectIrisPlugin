@@ -309,7 +309,7 @@ public class AiInteration {
                     if (!t.isEmpty()) {
                         Log.d(textTAG, t); // <<=== 你要的输出
                         if (messageCallback != null) {
-                            messageCallback.onMessageReceived("GEMINI (transcript): " + t, "transcript");
+                            messageCallback.onMessageReceived(t, "transcript");
                         }
                     }
                 }
@@ -326,7 +326,7 @@ public class AiInteration {
                                 String text = part.getString("text");
                                 Log.d(textTAG, text); // <<=== 也打印
                                 if (messageCallback != null) {
-                                    messageCallback.onMessageReceived("GEMINI: " + text, "text");
+                                    messageCallback.onMessageReceived(text, "text");
                                 }
                             }
 
