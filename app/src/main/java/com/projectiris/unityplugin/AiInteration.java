@@ -100,7 +100,6 @@ public class AiInteration {
     private HandlerThread cameraThread;
     private Handler cameraHandler;
     private String cameraId;
-    private Size previewSize;
     private boolean isCameraActive = false;
     private long lastImageSendTime = 0;
 
@@ -150,7 +149,17 @@ public class AiInteration {
     // Camera methods
     @RequiresPermission(Manifest.permission.CAMERA)
     public void startCamera(Context context){ openCameraForCapture(context);}
-    public void stopCamera(){ stopCameraPreview();}
+    public void stopCamera(){
+        if (cameraCaptureSession != null){
+            try {
+                cameraCaptureSession.stopRepeating();
+            } catch (Exception e){
+                Log.e(TAG, "Error stopping repeating capture", e);
+            }
+        }
+        isCameraActive = false;
+        closeCamera();
+    }
     public boolean isCameraActive(){ return isCameraActive;}
 
 
@@ -302,12 +311,12 @@ public class AiInteration {
             if (messageData.has("serverContent")) {
                 JSONObject serverContent = messageData.getJSONObject("serverContent");
 
-                // a) 模型“语音输出”的文字转写（官方字段：outputTranscription.text）
+                // Model response transcription (Official entry: outputTranscription.text)
                 if (serverContent.has("outputTranscription")) {
                     JSONObject outTx = serverContent.getJSONObject("outputTranscription");
                     String t = outTx.optString("text", "");
                     if (!t.isEmpty()) {
-                        Log.d(textTAG, t); // <<=== 你要的输出
+                        Log.d(textTAG, t);
                         if (messageCallback != null) {
                             messageCallback.onMessageReceived(t, "transcript");
                         }
@@ -395,18 +404,12 @@ public class AiInteration {
             Log.e(TAG, "Error opening camera for capture", e);
         }
     }
-    
-    private void stopCameraPreview() {
-        closeCamera();
-        isCameraActive = false;
-    }
-
 
     private final CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
-            createCameraPreviewSession();
+            createCameraCaptureSession();
         }
 
         @Override
@@ -427,7 +430,7 @@ public class AiInteration {
         }
     };
 
-    private void createCameraPreviewSession() {
+    private void createCameraCaptureSession() {
         try {
             // Create capture request for still pictures (no preview)
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
@@ -450,7 +453,7 @@ public class AiInteration {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     cameraCaptureSession = session;
-                    updatePreview();
+                    startCameraCapture();
                 }
 
                 @Override
@@ -459,7 +462,7 @@ public class AiInteration {
                 }
             };
 
-    private void updatePreview() {
+    private void startCameraCapture() {
         if (cameraDevice == null) return;
 
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
@@ -488,6 +491,7 @@ public class AiInteration {
             cameraDevice = null;
         }
         if (imageReader != null) {
+            imageReader.setOnImageAvailableListener(null,null);
             imageReader.close();
             imageReader = null;
         }
@@ -519,6 +523,12 @@ public class AiInteration {
             };
 
     private void processAndSendImage(byte[] imageBytes) {
+        // Guard check for stopped camera
+        if (!isCameraActive){
+            Log.d(TAG, "Camera not active, discarding images.");
+            return;
+        }
+
         String currentTime = timeFormat.format(new Date());
         Log.d(TAG, "Image processed and sending at: " + currentTime);
 

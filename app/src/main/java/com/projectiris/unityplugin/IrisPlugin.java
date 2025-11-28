@@ -42,28 +42,6 @@ public class IrisPlugin {
         Log.d(TAG, "IrisPlugin constructor called");
     }
 
-    public static void performActionWithApiKey(String ApiKey) {
-        if (unityActivity == null) {
-            Log.e(TAG, "UnityActivity is null");
-            return;
-        }
-
-        if (aiInteraction == null) {
-            Log.e(TAG, "AiInteraction not initialized");
-            return;
-        }
-
-        Log.d(TAG, "Performing action with ApiKey: " + ApiKey);
-        
-        try {
-            String result = "API initialized successfully with ApiKey: " + ApiKey;
-            UnityPlayer.UnitySendMessage(UNITY_CALLBACK_OBJECT, UNITY_CALLBACK_METHOD, result);
-        } catch (Exception e) {
-            Log.e(TAG, "Error performing action with ApiKey", e);
-            UnityPlayer.UnitySendMessage(UNITY_CALLBACK_OBJECT, UNITY_CALLBACK_METHOD, "Error: " + e.getMessage());
-        }
-    }
-
     public static void startConnection() {
         if (aiInteraction != null) {
             aiInteraction.start();
