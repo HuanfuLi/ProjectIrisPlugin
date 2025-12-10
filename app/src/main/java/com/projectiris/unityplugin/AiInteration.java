@@ -1,7 +1,6 @@
 package com.projectiris.unityplugin;
 
 // Imports
-
 import android.Manifest;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -52,7 +51,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class AiInteration {
+    // TAG "AiInteration" used to log messages of Gemini API connection and other information
     private static final String TAG = "AiInteration";
+
+    // TAG "textOutput" used to log messages of text output from Gemini API
     private static final String textTAG = "textOutput";
     
     // Message callback interface for UI updates
@@ -61,8 +63,16 @@ public class AiInteration {
     }
     
     private MessageCallback messageCallback;
+
+    // API_KEY used to store API key for Gemini API user inputted
     private String API_KEY;
+
+    // User can mute the AI and let AI only generate text
+    // If muted = true, Gemini Live API will switch to TEXT model
+    // If muted = false, Gemini Live API will switch to AUDIO model
     private boolean muted;
+
+    // Hardcode model name and Host name
     private static final String MODEL = "models/gemini-2.0-flash-exp";
     private static final String HOST = "generativelanguage.googleapis.com";
     public String URL;
@@ -180,13 +190,14 @@ public class AiInteration {
         cameraHandler = new Handler(cameraThread.getLooper());
     }
 
+    // Main method to connect to Gemini API using WebSocket
     private void connect() {
         Log.d(TAG, "Connecting to: " + URL);
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
 
         webSocket = new WebSocketClient(URI.create(URL), new Draft_6455(), headers) {
-            @Override
+            @Overrid
             public void onOpen(ServerHandshake handshakedata) {
                 Log.d(TAG, "Connected. Server handshake: " + handshakedata.getHttpStatus());
                 isConnected = true;
@@ -237,6 +248,7 @@ public class AiInteration {
         webSocket.connect();
     }
 
+    // close WebSocket connection
     private void disconnect(){
         if (webSocket != null){
             webSocket.close();
@@ -245,6 +257,10 @@ public class AiInteration {
         isConnected = false;
     }
 
+    // Main method to initially set up AI.
+    // In this method, the model of AI is set up.
+    // If muted = true, Gemini Live API will switch to TEXT model
+    // If muted = false, Gemini Live API will switch to AUDIO model
     private void sendInitialSetupMessage(){
         Log.d(TAG, "Sending initial setup message");
 
@@ -268,6 +284,7 @@ public class AiInteration {
 
             setupMessage.put("setup", setup);
 
+            // Send initial setup message
             Log.d(TAG, "Sending config payload: " + setupMessage.toString());
             webSocket.send(setupMessage.toString());
 
@@ -276,6 +293,7 @@ public class AiInteration {
         }
     }
 
+    // Send media chunk to WebSocket
     private void sendMediaChunk(String b64Data, String mimeType) {
         if (!isConnected) {
             Log.d(TAG, "WebSocket not connected");
@@ -300,6 +318,7 @@ public class AiInteration {
         }
     }
 
+    // Receive message from WebSocket
     private void receiveMessage(String message) {
         if (message == null) {
             return;
@@ -330,16 +349,16 @@ public class AiInteration {
                         for (int i = 0; i < parts.length(); i++) {
                             JSONObject part = parts.getJSONObject(i);
 
-                            // 模型直接返回的文本（也一起打到 textTAG，便于调试）
+                            // Model directly return text message
                             if (part.has("text")) {
                                 String text = part.getString("text");
-                                Log.d(textTAG, text); // <<=== 也打印
+                                Log.d(textTAG, text); // Log the text message received
                                 if (messageCallback != null) {
                                     messageCallback.onMessageReceived(text, "text");
                                 }
                             }
 
-                            // 模型返回的音频
+                            // Model return audio chunk
                             if (part.has("inlineData")) {
                                 JSONObject inlineData = part.getJSONObject("inlineData");
                                 if ("audio/pcm;rate=24000".equals(inlineData.optString("mimeType"))) {
@@ -356,6 +375,8 @@ public class AiInteration {
         }
     }
 
+    // Camera methods
+    // Open camera for capture
     @RequiresPermission(Manifest.permission.CAMERA)
     private void openCameraForCapture(Context context) {
         try {
@@ -405,6 +426,8 @@ public class AiInteration {
         }
     }
 
+    // Camera state callback
+    // This callback is called when the camera is opened or closed
     private final CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
@@ -430,6 +453,8 @@ public class AiInteration {
         }
     };
 
+    // Create capture session
+    // This method is called when the camera is opened
     private void createCameraCaptureSession() {
         try {
             // Create capture request for still pictures (no preview)
@@ -448,6 +473,8 @@ public class AiInteration {
         }
     }
 
+    // Camera capture session callback
+    // This callback is called when the capture session is configured or failed
     private final CameraCaptureSession.StateCallback cameraCaptureSessionCallback =
             new CameraCaptureSession.StateCallback() {
                 @Override
@@ -462,6 +489,8 @@ public class AiInteration {
                 }
             };
 
+    // Start camera capture
+    // This method is called when the capture session is configured
     private void startCameraCapture() {
         if (cameraDevice == null) return;
 
@@ -481,6 +510,8 @@ public class AiInteration {
         }
     }
 
+    // close Camera
+    // This method is called when the camera is closed
     private void closeCamera() {
         if (cameraCaptureSession != null) {
             cameraCaptureSession.close();
@@ -497,6 +528,8 @@ public class AiInteration {
         }
     }
 
+    // Image available listener
+    // This listener is called when an image is available for processing
     private final ImageReader.OnImageAvailableListener imageAvailableListener =
             new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -522,6 +555,7 @@ public class AiInteration {
                 }
             };
 
+    // Process image and send to WebSocket
     private void processAndSendImage(byte[] imageBytes) {
         // Guard check for stopped camera
         if (!isCameraActive){
@@ -553,6 +587,7 @@ public class AiInteration {
         }
     }
 
+    // Scale bitmap to max dimension
     private Bitmap scaleBitmap(Bitmap bitmap, int maxDimension) {
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
@@ -577,6 +612,7 @@ public class AiInteration {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true);
     }
 
+    // Start audio input
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private void startAudioInput() {
         if (isRecording) return;
@@ -632,6 +668,7 @@ public class AiInteration {
         }
     }
 
+    // Record audio chunk
     private void recordChunk() {
         List<Short> dataToSend;
         synchronized (pcmData) {
@@ -655,6 +692,8 @@ public class AiInteration {
         });
     }
 
+    // Ingest audio chunk to play
+    // This method is called when an audio chunk is received from WebSocket
     private void ingestAudioChunkToPlay(String base64AudioChunk) {
         if (base64AudioChunk == null) return;
 
@@ -674,6 +713,8 @@ public class AiInteration {
         });
     }
 
+    // Play next audio chunk
+    // This method is called when an audio chunk is ready to be played
     private void playNextAudioChunk() {
         executorService.execute(() -> {
             while (true) {
@@ -697,6 +738,7 @@ public class AiInteration {
         });
     }
 
+    // Play audio
     private void playAudio(byte[] byteArray) {
         if (audioTrack == null) {
             audioTrack = new AudioTrack(
@@ -728,12 +770,15 @@ public class AiInteration {
         });
     }
 
+    // Convert base64 to byte array
     private byte[] base64ToArrayBuffer(String base64) {
         return Base64.decode(base64, Base64.DEFAULT);
     }
 
     // Clean up resources
     public void cleanUp(){
+        // First stop camera capture
+        // And then disconnect from Gemini Live API
         stopRecording();
         disconnect();
 
